@@ -6,9 +6,11 @@ from collections import deque
 import pandas as pd
 import json
 from links import DogeLinks
+import tensorflow as tf
 
 TEST_PERCENT = 0.08
 VALIDATION_PERCENT = 0
+MODEL_PATH = "models/doge.h5"
 class Base:
 
 
@@ -42,6 +44,9 @@ class Base:
         print(gap.describe())
         gap_np = gap.to_numpy()
         self.marginal = max(np.mean(gap_np), np.median(gap_np))
+
+        abs(self.marginal)
+
         print(self.marginal)
         # print(gap)
         assert self.marginal > 0
@@ -82,13 +87,25 @@ class Base:
 
         dropout_01 = 0.2
         dropout_02 = 0.1
-        input_shape = (train_x.shape[1:])
+        self.input_shape = (train_x.shape[1:])
         print('---')
-        self.model = create_model(input_shape,dropout_01,dropout_02)
-        self.model.fit(train_x,train_y)
+        if os.path.exists(MODEL_PATH):
+            
+            self.model = tf.keras.models.load_model(MODEL_PATH)
+        else:
+            self.model = create_model(self.input_shape,dropout_01,dropout_02)
+            self.model.fit(train_x,train_y)
+            # tf.saved_model(self.model)
+            # self.model.save(MODEL_PATH, save_format='tf')
 
-    def predict(self):
-        pass
+
+    def predict(self, df):
+        df = df.drop([0], True)
+        df = df[-self.seq_len:]
+        predict_data = df.to_numpy()
+        predict_data = np.array([predict_data])
+        print(predict_data.shape, self.input_shape)
+        print(self.model.predict(predict_data))
 
     
     def prepare_sequential_data(self, main_df):
@@ -190,3 +207,8 @@ if __name__ == "__main__":
     # coin = CoinMarket(dogeLink.get_pklename(), cb=cb)
     coin = CoinMarket(dogeLink.get_pklename())
     coin.train()
+
+    today = dogeLink.get_json()
+    df = pd.read_json(json.dumps(today))
+
+    coin.predict(df)
