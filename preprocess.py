@@ -1,8 +1,9 @@
 import pickle
 import os, random
 import numpy as np
-
-
+from sklearn import preprocessing
+from collections import deque
+import pandas as pd
 TEST_PERCENT = 0.08
 VALIDATION_PERCENT = 0
 class Base:
@@ -44,6 +45,8 @@ class Base:
         self.seq_len = len(label) // 25
         print(self.seq_len)
 
+        self.df['label'] = pd.Series(label)
+
         dates = sorted(self.df[[0]].values)
         print('---')
 
@@ -67,43 +70,89 @@ class Base:
 
     def train(self):
         dev_df, test_df, val_df = self.preprocess()
+        train_x, train_y = self.process_sb_df(dev_df)
+        test_x, test_y = self.process_sb_df(test_df)
+        from models import create_model
+
+        dropout_01 = 0.2
+        dropout_02 = 0.1
+        input_shape = (train_x.shape[1:])
+        print('---')
+        model = create_model(input_shape,dropout_01,dropout_02)
+        model.fit(train_x,train_y)
 
     
-    # def process_sb_df(self):
-    #     sequential_data, close_backup = prepare_sequential_data(self.df, self.seq_len)
-    #     random.shuffle(sequential_data)
+    def prepare_sequential_data(self, main_df):
+        df = main_df.copy(deep=True)
+        
 
-    #     sells = []
-    #     keeps = []
-    #     buys = []
-    #     for seq, target in sequential_data:
-    #         if target == 0:  # sell
-    #             sells.append([seq, target])
-    #         elif target == 1:  # keep
-    #             keeps.append([seq, target])
-    #         elif target == 2:  # buy
-    #             buys.append([seq, target])
+        for col in df.columns[:-1]:
 
-    #     random.shuffle(sells)
-    #     random.shuffle(keeps)
-    #     random.shuffle(buys)
+            df[col] = df[col].pct_change()
 
-    #     lower = min(len(sells), len(keeps), len(buys))
+                # if col not in PRICE_HEADERS:
+                #     if VERBOSE:
+                #         # check for stationarity
+                #         # https://machinelearningmastery.com/time-series-data-stationary-python/
+                #         diffed_result = adfuller(df[col].values[1:], autolag="AIC")
+                #         print('ADF Statistic: %f' % diffed_result[0])
+                #         print('p-value: %f' % diffed_result[1])
+                #         print('Critical Values:')
+                #         for key, value in diffed_result[4].items():
+                #             print('\t%s: %.3f' % (key, value))
 
-    #     sells = sells[:lower]
-    #     keeps = keeps[:lower]
-    #     buys = buys[:lower]
+        df.dropna(inplace=True)
 
-    #     sequential_data = sells + keeps + buys
-    #     random.shuffle(sequential_data)
+        sequential_data = []
+        close_backup = []
+        prev_days = deque(maxlen=self.seq_len)
 
-    #     X = []
-    #     y = []
-    #     for seq, target in sequential_data:
-    #         X.append(seq)
-    #         y.append(target)
+        # print("column used: ", df.columns[:-2])
+        # print("target column: ", df.columns[-2])
 
-    #     return np.array(X), y
+        for i in df.values:
+            prev_days.append([n for n in i[:-1]])
+            if len(prev_days) == self.seq_len:
+                sequential_data.append([preprocessing.scale(np.array(prev_days)), i[-1]])
+                close_backup.append(i[-1])
+
+        return sequential_data, close_backup
+
+    def process_sb_df(self, df):
+        sequential_data, close_backup = self.prepare_sequential_data(df)
+        random.shuffle(sequential_data)
+
+        sells = []
+        keeps = []
+        buys = []
+        for seq, target in sequential_data:
+            if target == 0:  # sell
+                sells.append([seq, target])
+            elif target == 1:  # keep
+                keeps.append([seq, target])
+            elif target == 2:  # buy
+                buys.append([seq, target])
+
+        random.shuffle(sells)
+        random.shuffle(keeps)
+        random.shuffle(buys)
+
+        lower = min(len(sells), len(keeps), len(buys))
+
+        sells = sells[:lower]
+        keeps = keeps[:lower]
+        buys = buys[:lower]
+
+        sequential_data = sells + keeps + buys
+        random.shuffle(sequential_data)
+
+        X = []
+        y = []
+        for seq, target in sequential_data:
+            X.append(seq)
+            y.append(target)
+
+        return np.array(X), y
 
 
 class CoinMarket(Base):
