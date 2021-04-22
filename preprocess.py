@@ -7,10 +7,26 @@ import pandas as pd
 import json
 from links import DogeLinks
 import tensorflow as tf
+from bark import Bark
+from enum import Enum
+from datetime import datetime
+import time
 
-TEST_PERCENT = 0.08
+TEST_PERCENT = 0.1
 VALIDATION_PERCENT = 0
 MODEL_PATH = "models/doge.h5"
+SEQ_LEN = 48
+MARGINAL_RATIO = 1.4
+MARGIN_PERCENT = 0.03
+
+
+class Action(Enum):
+    sell = 0
+    buy = 2
+    keep = 1
+
+    def val(self):
+        return self.value
 class Base:
 
 
@@ -24,16 +40,25 @@ class Base:
                 print(self.df.shape)
         self.target_idx = None
         self.shift_window = -1 
+        self.bark = Bark()
         # self.df.columns = [str(i) for i in range(self.df.shape[1])]
         # self.df.set_index(0, inplace=True)
 
     def classify_sb(self, current, future):
-        if float(future) < float(current) - self.marginal:
-            return 0  # sell
-        elif float(future) > float(current) + self.marginal:
-            return 2  # buy
+        if float(future) < float(current * (1.0 - MARGIN_PERCENT)):
+            return Action.sell.val()   #0  # sell
+        elif float(future) > float(current * (1.0 + MARGIN_PERCENT)):
+            return Action.buy.val()   #2  # buy
         else:
-            return 1  # keep
+            return Action.keep.val()   #1  # keep
+
+        ###### comment for old
+        # if float(future) < float(current) - self.marginal:
+        #     return 0  # sell
+        # elif float(future) > float(current) + self.marginal:
+        #     return 2  # buy
+        # else:
+        #     return 1  # keep
 
     def preprocess(self):
         target_df = self.df[[self.target_idx]]
@@ -45,7 +70,7 @@ class Base:
         gap_np = gap.to_numpy()
         self.marginal = max(np.mean(gap_np), np.median(gap_np))
 
-        abs(self.marginal)
+        self.marginal = abs(self.marginal) * MARGINAL_RATIO
 
         print(self.marginal)
         # print(gap)
@@ -53,7 +78,7 @@ class Base:
 
         label = list(map(self.classify_sb, target_df.to_numpy(), shift_df.to_numpy()))
         print('--', len(label))
-        self.seq_len = len(label) // 25
+        self.seq_len = SEQ_LEN
         print(self.seq_len)
 
         self.df['label'] = pd.Series(label)
@@ -107,19 +132,18 @@ class Base:
         predict_data = np.array([predict_data])
         print(predict_data.shape, self.input_shape)
         ret = self.model.predict(predict_data)[0]
-        if ret == 0:
+        last_usd = predict_data[0][-1,0]
+        if ret == Action.sell.val():
             print(ret, "sell")
-        elif ret == 1:
+            self.bark.notify("sell_Doge", f"sell_price:{last_usd}")
+        elif ret == Action.keep.val():
             print(ret, "keep")
-        elif ret == 2:
+        elif ret == Action.buy.val():
             print(ret, "buy")
+            self.bark.notify("buy_Doge", f"buy_price:{last_usd}")
         else:
             print(ret, "error")
-        # return 0  # sell
-        # elif float(future) > float(current) + self.marginal:
-        #     return 2  # buy
-        # else:
-        #     return 1  # keep
+  
 
     
     def prepare_sequential_data(self, main_df):
@@ -216,11 +240,7 @@ class CoinMarket(Base):
         self.target_idx = 1
     
 
-
-
-if __name__ == "__main__":
-    # coin = CoinMarket('doge_by_5min_day_20210422.pkl')
-
+def main():
     dogeLink = DogeLinks.day_by_5_min
     def cb():
         doge_data = []
@@ -240,3 +260,14 @@ if __name__ == "__main__":
     df = pd.read_json(json.dumps(today))
 
     coin.predict(df)
+
+
+if __name__ == "__main__":
+    # coin = CoinMarket('doge_by_5min_day_20210422.pkl')
+    main()
+    while True:
+        current_time = datetime.now().timetuple()
+        if current_time.tm_min % 20 == 0:
+            main()
+        print('sleeping...')
+        time.sleep(60)

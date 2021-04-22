@@ -7,7 +7,7 @@ from datetime import date, timedelta
 class DogeLinks(Enum):
 
     all_by_day = "https://web-api.coinmarketcap.com/v1/cryptocurrency/ohlcv/historical?id=74&convert=USD&time_start=1000732800&time_end=1619049600"
-    day_by_5_min = f"https://web-api.coinmarketcap.com/v1.1/cryptocurrency/quotes/historical?convert=USD,BTC&format=chart_crypto_details&id=74&interval=5m&time_end={int(time.time())}&time_start={int(time.time()) - 86400}"
+    day_by_5_min = f"https://web-api.coinmarketcap.com/v1.1/cryptocurrency/quotes/historical?convert=USD,BTC&format=chart_crypto_details&id=74&interval=15m&time_end={int(time.time())}&time_start={int(time.time()) - 86400}"
 
 
     def get_pklename(self):
@@ -37,7 +37,7 @@ class DogeLinks(Enum):
     # 0 is today
     @staticmethod
     def get_5min_data_by_day(day_before_today):
-        url = f"https://web-api.coinmarketcap.com/v1.1/cryptocurrency/quotes/historical?convert=USD,BTC&format=chart_crypto_details&id=74&interval=5m&time_end={int(time.time()) - day_before_today * 86400}&time_start={int(time.time()) - (day_before_today + 1) * 86400}"
+        url = f"https://web-api.coinmarketcap.com/v1.1/cryptocurrency/quotes/historical?convert=USD,BTC&format=chart_crypto_details&id=74&interval=15m&time_end={int(time.time()) - day_before_today * 86400}&time_start={int(time.time()) - (day_before_today + 1) * 86400}"
         http = HttpRequest()
         print(url)
         r = http.get(url)
