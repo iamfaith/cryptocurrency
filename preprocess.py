@@ -1,5 +1,5 @@
 import pickle
-import os
+import os, random
 import numpy as np
 
 
@@ -59,7 +59,51 @@ class Base:
 
         print("dev : ", len(dev_df), ", test :", len(test_df), ", valid :", len(val_df))
 
+        # drop date
+        dev_df = dev_df.drop([0], True)
+        test_df = test_df.drop([0], True)
+        val_df = val_df.drop([0], True)
         return dev_df, test_df, val_df
+
+    def train(self):
+        dev_df, test_df, val_df = self.preprocess()
+
+    
+    # def process_sb_df(self):
+    #     sequential_data, close_backup = prepare_sequential_data(self.df, self.seq_len)
+    #     random.shuffle(sequential_data)
+
+    #     sells = []
+    #     keeps = []
+    #     buys = []
+    #     for seq, target in sequential_data:
+    #         if target == 0:  # sell
+    #             sells.append([seq, target])
+    #         elif target == 1:  # keep
+    #             keeps.append([seq, target])
+    #         elif target == 2:  # buy
+    #             buys.append([seq, target])
+
+    #     random.shuffle(sells)
+    #     random.shuffle(keeps)
+    #     random.shuffle(buys)
+
+    #     lower = min(len(sells), len(keeps), len(buys))
+
+    #     sells = sells[:lower]
+    #     keeps = keeps[:lower]
+    #     buys = buys[:lower]
+
+    #     sequential_data = sells + keeps + buys
+    #     random.shuffle(sequential_data)
+
+    #     X = []
+    #     y = []
+    #     for seq, target in sequential_data:
+    #         X.append(seq)
+    #         y.append(target)
+
+    #     return np.array(X), y
 
 
 class CoinMarket(Base):
@@ -75,4 +119,4 @@ class CoinMarket(Base):
 if __name__ == "__main__":
 
     coin = CoinMarket('doge_by_5min_day_20210422.pkl')
-    coin.preprocess()
+    coin.train()
