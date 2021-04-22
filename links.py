@@ -2,12 +2,12 @@
 import time, json
 from http_request import HttpRequest
 from enum import Enum
-
+from datetime import date, timedelta
 
 class DogeLinks(Enum):
 
     all_by_day = "https://web-api.coinmarketcap.com/v1/cryptocurrency/ohlcv/historical?id=74&convert=USD&time_start=1000732800&time_end=1619049600"
-    day_by_5_min = f"https://web-api.coinmarketcap.com/v1.1/cryptocurrency/quotes/historical?convert=USD,BTC&format=chart_crypto_details&id=74&interval=5m&time_end={int(time.time())}&time_start=1618991900"
+    day_by_5_min = f"https://web-api.coinmarketcap.com/v1.1/cryptocurrency/quotes/historical?convert=USD,BTC&format=chart_crypto_details&id=74&interval=5m&time_end={int(time.time())}&time_start={int(time.time()) - 86400}"
 
 
     def get_pklename(self):
@@ -21,6 +21,7 @@ class DogeLinks(Enum):
     def get_json(self):
 
         http = HttpRequest()
+        print(self.value)
         r = http.get(self.value)
 
         if self == DogeLinks.all_by_day:
