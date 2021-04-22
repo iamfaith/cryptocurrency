@@ -12,6 +12,10 @@ lowerbound = -0.15
 
 pushes = ['nwsrJuWCNoh3XKgogVv8tQ', 'gkeS97H7xBtPvraCC46pee']
 
+def notify(is_notified=True):
+    pass
+
+
 def callback(obj_event: 'MarketDetailEvent'):
     # obj_event.print_object()
     # obj_event.tick.print_object()
@@ -34,17 +38,18 @@ def callback(obj_event: 'MarketDetailEvent'):
         else:
             title = f"down{range_str}"
 
-        for push in pushes:       
-            url = f"https://api.day.app/{push}/{title}/{msg}"
-            # url = urllib.parse.quote(url)
-            url = url.replace('%', '%25')
-            print(url)
-            req = urllib.request.Request(url)
-            with urllib.request.urlopen(req) as response:
-                the_page = response.read()
+        # for push in pushes:       
+        #     url = f"https://api.day.app/{push}/{title}/{msg}"
+        #     # url = urllib.parse.quote(url)
+        #     url = url.replace('%', '%25')
+        #     print(url)
+        #     req = urllib.request.Request(url)
+        #     with urllib.request.urlopen(req) as response:
+        #         the_page = response.read()
         # requests.get(url)
     print(msg)
     print()
 
 market_client = MarketClient(init_log=True, url="https://api.huobiasia.vip")
-market_client.sub_market_detail("filusdt", callback)
+# market_client.sub_market_detail("filusdt", callback)
+market_client.sub_market_detail("dogeusdt", callback)
