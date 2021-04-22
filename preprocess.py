@@ -82,6 +82,7 @@ class Base:
     def train(self):
         dev_df, test_df, val_df = self.preprocess()
         train_x, train_y = self.process_sb_df(dev_df)
+        print(dev_df.shape, train_x.shape)
         test_x, test_y = self.process_sb_df(test_df)
         from models import create_model
 
@@ -105,7 +106,20 @@ class Base:
         predict_data = df.to_numpy()
         predict_data = np.array([predict_data])
         print(predict_data.shape, self.input_shape)
-        print(self.model.predict(predict_data))
+        ret = self.model.predict(predict_data)[0]
+        if ret == 0:
+            print(ret, "sell")
+        elif ret == 1:
+            print(ret, "keep")
+        elif ret == 2:
+            print(ret, "buy")
+        else:
+            print(ret, "error")
+        # return 0  # sell
+        # elif float(future) > float(current) + self.marginal:
+        #     return 2  # buy
+        # else:
+        #     return 1  # keep
 
     
     def prepare_sequential_data(self, main_df):
@@ -133,14 +147,25 @@ class Base:
         close_backup = []
         prev_days = deque(maxlen=self.seq_len)
 
-        # print("column used: ", df.columns[:-2])
-        # print("target column: ", df.columns[-2])
 
         for i in df.values:
             prev_days.append([n for n in i[:-1]])
             if len(prev_days) == self.seq_len:
                 sequential_data.append([preprocessing.scale(np.array(prev_days)), i[-1]])
                 close_backup.append(i[-1])
+
+        # df_np = df.to_numpy()
+        # for idx, i in enumerate(df.values):
+        #     print(idx, i)
+        #     if idx+self.seq_len >= df.shape[0]:
+        #         break
+        #     temp_data = df_np[idx:idx+self.seq_len, :]
+        #     if temp_data.shape[0] < self.seq_len:
+        #         continue
+        #     seq_data = temp_data[:,:-1]
+        #     sequential_data.append([preprocessing.scale(seq_data), df_np[idx+self.seq_len, -1]])
+
+                
 
         return sequential_data, close_backup
 
@@ -159,15 +184,17 @@ class Base:
             elif target == 2:  # buy
                 buys.append([seq, target])
 
-        random.shuffle(sells)
-        random.shuffle(keeps)
-        random.shuffle(buys)
+        ############################# comment for inbalance
+        # random.shuffle(sells)
+        # random.shuffle(keeps)
+        # random.shuffle(buys)
 
-        lower = min(len(sells), len(keeps), len(buys))
+        # lower = min(len(sells), len(keeps), len(buys))
 
-        sells = sells[:lower]
-        keeps = keeps[:lower]
-        buys = buys[:lower]
+        # sells = sells[:lower]
+        # keeps = keeps[:lower]
+        # buys = buys[:lower]
+        ############################# comment for inbalance
 
         sequential_data = sells + keeps + buys
         random.shuffle(sequential_data)
@@ -196,16 +223,17 @@ if __name__ == "__main__":
 
     dogeLink = DogeLinks.day_by_5_min
     def cb():
-        yesterday = DogeLinks.get_5min_data_by_day(1)
-        today = dogeLink.get_json()
-        yesterday.extend(today)
+        doge_data = []
+        doge_data.extend(DogeLinks.get_5min_data_by_day(2))
+        doge_data.extend(DogeLinks.get_5min_data_by_day(1))
+        doge_data.extend(dogeLink.get_json())
         # print(yesterday)
 
-        df = pd.read_json(json.dumps(yesterday))
+        df = pd.read_json(json.dumps(doge_data))
         df.to_pickle(dogeLink.get_pklename())
         return df
-    # coin = CoinMarket(dogeLink.get_pklename(), cb=cb)
-    coin = CoinMarket(dogeLink.get_pklename())
+    coin = CoinMarket(dogeLink.get_pklename(), cb=cb)
+    # coin = CoinMarket(dogeLink.get_pklename())
     coin.train()
 
     today = dogeLink.get_json()
