@@ -37,7 +37,14 @@ class DogeLinks(Enum):
         if self == DogeLinks.day_by_5_min:
             data_json = json.loads(r.text)["data"]
             usd = None
+            dates = []
             for price in data_json:
-                usd = data_json[price]['USD'][0]
-                data_json[price] = [usd]
-            return data_json
+                # usd = data_json[price]['USD'][0]
+                # data_json[price] = [usd]
+                temp_list = []
+                usd = data_json[price]['USD']
+                data_json[price] = usd
+                temp_list.append(price)
+                temp_list.extend(usd)
+                dates.append(temp_list)
+            return dates
