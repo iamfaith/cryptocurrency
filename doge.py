@@ -31,11 +31,13 @@ from links import DogeLinks
 
 dogeLink = DogeLinks.day_by_5_min
 
-data_json = dogeLink.get_json()
+# data_json = dogeLink.get_json()
+yesterday = DogeLinks.get_5min_data_by_day(1)
+today = dogeLink.get_json()
+yesterday.extend(today)
+# print(yesterday)
 
-# print(data_json)
-df = pd.read_json(json.dumps(data_json))
-# print(r.text)
+df = pd.read_json(json.dumps(yesterday))
 # df.sort_values(by=['Date'])
 print(df.shape)
 df.to_pickle(dogeLink.get_pklename())

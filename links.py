@@ -18,6 +18,32 @@ class DogeLinks(Enum):
             return f"doge_by_5min_day_{date}.pkl"
 
 
+    @staticmethod
+    def parse_5min_data(text):
+        data_json = json.loads(text)["data"]
+        usd = None
+        dates = []
+        for price in data_json:
+            # usd = data_json[price]['USD'][0]
+            # data_json[price] = [usd]
+            temp_list = []
+            usd = data_json[price]['USD']
+            data_json[price] = usd
+            temp_list.append(price)
+            temp_list.extend(usd)
+            dates.append(temp_list)
+        return dates
+    
+    # 0 is today
+    @staticmethod
+    def get_5min_data_by_day(day_before_today):
+        url = f"https://web-api.coinmarketcap.com/v1.1/cryptocurrency/quotes/historical?convert=USD,BTC&format=chart_crypto_details&id=74&interval=5m&time_end={int(time.time()) - day_before_today * 86400}&time_start={int(time.time()) - (day_before_today + 1) * 86400}"
+        http = HttpRequest()
+        print(url)
+        r = http.get(url)
+        return DogeLinks.parse_5min_data(r.text)
+
+
     def get_json(self):
 
         http = HttpRequest()
@@ -35,16 +61,4 @@ class DogeLinks(Enum):
             
             return data_json
         if self == DogeLinks.day_by_5_min:
-            data_json = json.loads(r.text)["data"]
-            usd = None
-            dates = []
-            for price in data_json:
-                # usd = data_json[price]['USD'][0]
-                # data_json[price] = [usd]
-                temp_list = []
-                usd = data_json[price]['USD']
-                data_json[price] = usd
-                temp_list.append(price)
-                temp_list.extend(usd)
-                dates.append(temp_list)
-            return dates
+            return self.parse_5min_data(r.text)
