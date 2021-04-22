@@ -39,5 +39,8 @@ def _create_model(input_shape,dropout_01,dropout_02):
 
 
 def create_model(input_shape,dropout_01,dropout_02):
-    model = KerasClassifier(build_fn=_create_model, input_shape=input_shape, dropout_01=dropout_01, dropout_02=dropout_02, epochs=10, batch_size=128, verbose=1)
+    gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
+    tf.config.experimental.set_visible_devices(devices=gpus[0], device_type='GPU')
+    tf.config.experimental.set_memory_growth(device=gpus[0], enable=True)
+    model = KerasClassifier(build_fn=_create_model, input_shape=input_shape, dropout_01=dropout_01, dropout_02=dropout_02, epochs=55, batch_size=128, verbose=1)
     return model

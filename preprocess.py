@@ -4,16 +4,22 @@ import numpy as np
 from sklearn import preprocessing
 from collections import deque
 import pandas as pd
+import json
+from links import DogeLinks
+
 TEST_PERCENT = 0.08
 VALIDATION_PERCENT = 0
 class Base:
 
 
-    def __init__(self, file):
-        assert os.path.exists(file)
-        with open( file, "rb" ) as f:
-            self.df = pickle.load(f)
-            print(self.df.shape)
+    def __init__(self, file, cb=None):
+        if cb is not None:
+            self.df = cb()
+        else:
+            assert os.path.exists(file)
+            with open( file, "rb" ) as f:
+                self.df = pickle.load(f)
+                print(self.df.shape)
         self.target_idx = None
         self.shift_window = -1 
         # self.df.columns = [str(i) for i in range(self.df.shape[1])]
@@ -78,8 +84,11 @@ class Base:
         dropout_02 = 0.1
         input_shape = (train_x.shape[1:])
         print('---')
-        model = create_model(input_shape,dropout_01,dropout_02)
-        model.fit(train_x,train_y)
+        self.model = create_model(input_shape,dropout_01,dropout_02)
+        self.model.fit(train_x,train_y)
+
+    def predict(self):
+        pass
 
     
     def prepare_sequential_data(self, main_df):
@@ -158,14 +167,26 @@ class Base:
 class CoinMarket(Base):
 
 
-    def __init__(self, file):
-        super().__init__(file)
+    def __init__(self, file, cb=None):
+        super().__init__(file, cb=cb)
         self.target_idx = 1
     
 
 
 
 if __name__ == "__main__":
+    # coin = CoinMarket('doge_by_5min_day_20210422.pkl')
 
-    coin = CoinMarket('doge_by_5min_day_20210422.pkl')
+    dogeLink = DogeLinks.day_by_5_min
+    def cb():
+        yesterday = DogeLinks.get_5min_data_by_day(1)
+        today = dogeLink.get_json()
+        yesterday.extend(today)
+        # print(yesterday)
+
+        df = pd.read_json(json.dumps(yesterday))
+        df.to_pickle(dogeLink.get_pklename())
+        return df
+    # coin = CoinMarket(dogeLink.get_pklename(), cb=cb)
+    coin = CoinMarket(dogeLink.get_pklename())
     coin.train()
