@@ -16,8 +16,12 @@ TEST_PERCENT = 0.1
 VALIDATION_PERCENT = 0
 MODEL_PATH = "models/doge.h5"
 SEQ_LEN = 48
+# deprecated
 MARGINAL_RATIO = 1.4
-MARGIN_PERCENT = 0.05
+
+
+NEXT_SEQ = 3
+MARGIN_PERCENT = 0.01
 
 
 class Action(Enum):
@@ -60,6 +64,22 @@ class Base:
         # else:
         #     return 1  # keep
 
+    def calculate_action(self, currents, futures):
+        assert len(currents) == len(futures)
+        label = []
+        for i, current in enumerate(currents):
+            future = futures[i]
+            if float(future) < float(current * (1.0 - MARGIN_PERCENT)):
+                label.append(Action.sell.val())   #0  # sell
+            elif float(future) > float(current * (1.0 + MARGIN_PERCENT)):
+                label.append(Action.buy.val())   #2  # buy
+            else:
+                sum_current = np.sum(currents[i: i+NEXT_SEQ])
+                sum_future = np.sum(futures[i: i+NEXT_SEQ])
+                label.append(self.classify_sb(sum_current, sum_future))
+        return label
+
+
     def preprocess(self):
         target_df = self.df[[self.target_idx]]
         print(self.target_idx)
@@ -76,7 +96,8 @@ class Base:
         # print(gap)
         assert self.marginal > 0
 
-        label = list(map(self.classify_sb, target_df.to_numpy(), shift_df.to_numpy()))
+        # label = list(map(self.classify_sb, target_df.to_numpy(), shift_df.to_numpy()))
+        label = self.calculate_action(target_df.to_numpy(), shift_df.to_numpy())
         print('--', len(label))
         self.seq_len = SEQ_LEN
         print(self.seq_len)
@@ -265,9 +286,9 @@ def main():
 if __name__ == "__main__":
     # coin = CoinMarket('doge_by_5min_day_20210422.pkl')
     main()
-    while True:
-        current_time = datetime.now().timetuple()
-        if current_time.tm_min % 20 == 0:
-            main()
-        print('sleeping...')
-        time.sleep(60)
+    # while True:
+    #     current_time = datetime.now().timetuple()
+    #     if current_time.tm_min % 20 == 0:
+    #         main()
+    #     print('sleeping...')
+    #     time.sleep(60)
